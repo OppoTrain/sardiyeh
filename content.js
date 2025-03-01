@@ -132,26 +132,50 @@
 
   const replaceText = (el, bloom) => {
     if (el.nodeType === Node.TEXT_NODE) {
-      const words = el.textContent.split(/\b/);
-      const updatedText = words
-        .map((word) => {
-          const key = word.toLowerCase();
-          if (!bloom.contains(key)) {
-            if (textToChange[key]) {
-              createTooltip(el, word);
-              return textToChange[key];
-            }
+      const words = el.textContent.split(regex);
+      const updatedNodes = words.map((word) => {
+        const key = word.toLowerCase();
+  
+        if (!bloom.contains(key) && textToChange[key]) {
+          const replacement = textToChange[key];
+          if (!replacedSet.has(word)) {
+            replacedSet.add(word);
+            replacedWords.push({ word, replacement });
           }
-          return word;
-        })
+  
+          const span = document.createElement("span");
+          span.textContent = replacement;
+          span.style.textDecoration = "underline";
+          span.style.textDecorationColor = "green";
+          span.style.textDecorationThickness = "3px";
+  
+          return span;
+        }
+  
+        return document.createTextNode(word);
+      });
+  
+      const parent = el.parentNode;
+      if (parent) {
+        updatedNodes.forEach((node) => parent.insertBefore(node, el));
+        parent.removeChild(el);
+      }
+    } else if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
+      const value = el.value;
+      const words = value.split(regex);
+      const updatedValue = words
+        .map((word) =>
+          textToChange[word.toLowerCase()] ? textToChange[word.toLowerCase()] : word
+        )
         .join("");
-      el.textContent = updatedText;
+      el.value = updatedValue;
     } else {
       for (let child of el.childNodes) {
         replaceText(child, bloom);
       }
     }
   };
+  
 
   const replaceImages = () => {
     const flagContainer = document.querySelector("div.MRI68d");
